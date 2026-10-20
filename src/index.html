@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-br" data-bs-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RF Analyzer</title>
+    <!-- Bootstrap 5 & Ícones -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Estilo em Tons de Cinza -->
+    <link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+
+    <!-- Overlay de Carregamento -->
+    <div id="loading-overlay" class="loading-overlay text-white">
+        <div class="spinner-border text-emerald-500" style="width:3.5rem;height:3.5rem;" role="status"></div>
+        <p class="mt-3 fs-5 fw-medium">Analisando registros RF...</p>
+    </div>
+
+    <!-- Barra Lateral -->
+    <aside class="sidebar p-4">
+        <div class="d-flex align-items-center gap-2 mb-4 pb-2 border-bottom border-slate-700">
+            <i class="bi bi-box-seam fs-3 text-emerald-400"></i>
+            <h2 class="brand-title h4 mb-0">RF Analyzer</h2>
+        </div>
+
+        <form id="analise-form" class="d-flex flex-column flex-grow-1">
+            <div class="mb-3 d-flex flex-column flex-grow-1">
+                <label for="codigos" class="form-label fw-medium text-slate-300">1. Cole os Pedidos</label>
+                <textarea class="form-control flex-grow-1" id="codigos" name="codigos"
+                    placeholder="Um pedido por linha..." required></textarea>
+            </div>
+
+            <div class="mb-3">
+                <button type="button" class="btn btn-sm btn-amber w-100 py-2" onclick="baixarCsvModelo()">
+                    <i class="bi bi-file-earmark-arrow-down me-1"></i> Baixar CSV Modelo
+                </button>
+            </div>
+
+            <!-- 2. Arquivo(s) RF -->
+            <div class="mb-3">
+                <label class="form-label fw-medium text-slate-300">2. Arquivo(s) RF</label>
+                <label class="file-upload-box w-100">
+                    <i class="bi bi-cloud-arrow-up fs-5 text-slate-400 mb-1"></i>
+                    <span id="label-rf" class="file-upload-text">Selecionar arquivos RF...</span>
+                    <input type="file" id="arquivo_rf" name="arquivo_rf" multiple required
+                        onchange="atualizarNomeArquivo(this, 'label-rf')">
+                </label>
+            </div>
+
+            <!-- 3. Cargas (CSV ou TXT) -->
+            <div class="mb-4">
+                <label class="form-label fw-medium text-slate-300">3. Cargas (CSV ou TXT)</label>
+                <label class="file-upload-box w-100">
+                    <i class="bi bi-file-earmark-spreadsheet fs-5 text-slate-400 mb-1"></i>
+                    <span id="label-cargas" class="file-upload-text">Selecionar arquivo de cargas...</span>
+                    <input type="file" id="arquivo_cargas" name="arquivo_cargas" accept=".csv,.txt"
+                        onchange="atualizarNomeArquivo(this, 'label-cargas')">
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-emerald btn-lg w-100 py-2.5 fw-bold">
+                <i class="bi bi-play-fill me-1"></i> Processar Dados
+            </button>
+        </form>
+    </aside>
+
+    <!-- Conteúdo Principal -->
+    <main class="main-content p-4 p-lg-5">
+        <div class="mb-4">
+            <h1 class="h3 fw-bold mb-1">Painel de Ajustes de Carga</h1>
+            <p class="text-muted mb-0 small">Analise, filtre e atualize dados de logística em lote.</p>
+        </div>
+
+        <div id="boas-vindas" class="slate-card p-5 text-center my-auto">
+            <i class="bi bi-file-earmark-text text-slate-500 display-4 mb-3"></i>
+            <h4 class="fw-bold">Nenhum dado carregado</h4>
+            <p class="text-muted">Insira os números dos pedidos e os arquivos RF na barra lateral para começar a
+                análise.</p>
+        </div>
+
+        <div id="area-resultados" style="display: none;">
+            <!-- Indicadores -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="slate-card p-3 d-flex align-items-center gap-3">
+                        <div class="p-3 bg-slate-800 text-slate-300 rounded-3"><i class="bi bi-search fs-4"></i></div>
+                        <div>
+                            <span class="text-muted small d-block">Buscados</span>
+                            <strong id="res-buscados" class="fs-4">0</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="slate-card p-3 d-flex align-items-center gap-3">
+                        <div class="p-3 bg-slate-800 text-slate-300 rounded-3"><i class="bi bi-files fs-4"></i></div>
+                        <div>
+                            <span class="text-muted small d-block">Arquivos Processados</span>
+                            <strong id="res-arquivos" class="fs-4">0</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="slate-card p-3 d-flex align-items-center gap-3">
+                        <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-3"><i
+                                class="bi bi-check-circle fs-4"></i></div>
+                        <div>
+                            <span class="text-muted small d-block">Encontrados</span>
+                            <strong id="res-encontrados" class="fs-4 text-emerald-400">0</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabela -->
+            <div class="slate-card p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-blue filter-btn active"
+                            onclick="filtrarTabela('todos', this)">Todos</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary filter-btn"
+                            onclick="filtrarTabela('com_nf', this)">Com NF</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary filter-btn"
+                            onclick="filtrarTabela('sem_nf', this)">Sem NF</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary filter-btn"
+                            onclick="filtrarTabela('com_carga', this)">Com Carga</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary filter-btn"
+                            onclick="filtrarTabela('sem_carga', this)">Sem Carga</button>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-amber" onclick="copiarPedidosVisiveis(this)"><i
+                                class="bi bi-copy me-1"></i> Copiar Pedidos</button>
+                        <button class="btn btn-sm btn-emerald fw-medium" onclick="exportarTudo()"><i
+                                class="bi bi-download me-1"></i> Exportar TXT</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table custom-table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Pedido</th>
+                                <th>Cliente</th>
+                                <th>Valor (R$)</th>
+                                <th>NF</th>
+                                <th>Carga</th>
+                                <th>Arquivo</th>
+                                <th class="text-end">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-corpo"></tbody>
+                    </table>
+                </div>
+
+                <div class="text-end text-muted small mt-3">
+                    Exibindo <span id="contador-visiveis" class="fw-bold text-white">0</span> resultados.
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal para Detalhes do Bloco RF -->
+    <div class="modal fade" id="modalDetalhesRf" tabindex="-1" aria-labelledby="modalDetalhesRfLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content slate-card">
+                <div class="modal-header border-bottom border-slate-700 py-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-file-earmark-code fs-4 text-emerald-400"></i>
+                        <div>
+                            <h5 class="modal-title fw-bold text-white mb-0" id="modalDetalhesRfLabel">Detalhes do
+                                Registro RF</h5>
+                            <small class="text-muted" id="modalSubtituloPed">Pedido: —</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="small fw-semibold text-slate-300"><i class="bi bi-terminal me-1"></i> Linhas
+                            Originais do Arquivo:</span>
+                        <button class="btn btn-sm btn-amber" id="btnCopiarModal" onclick="copiarTextoModal(this)">
+                            <i class="bi bi-clipboard me-1"></i> Copiar Conteúdo
+                        </button>
+                    </div>
+                    <div class="rf-code-wrapper">
+                        <pre class="rf-code m-0" id="conteudoModalRf"></pre>
+                    </div>
+                </div>
+                <div class="modal-footer border-top border-slate-700 py-2">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="./app.js"></script>
+</body>
+
+</html>
