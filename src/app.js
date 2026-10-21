@@ -88,6 +88,7 @@ document.getElementById('analise-form').addEventListener('submit', async (e) => 
     }
 });
 
+
 function renderizarTabela(itens) {
     const tbody = document.getElementById('tabela-corpo');
     tbody.innerHTML = '';

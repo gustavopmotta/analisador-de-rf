@@ -115,9 +115,12 @@ def processar_analise_rf(codigos_raw: str, arquivos_rf: List[UploadFile], arquiv
                     valor_atual_fmt = rf_money(p[9])
                 
                 nf_val = p[3].strip() if len(p) > 3 else ''
-                if nf_val and nf_val != '0':
-                    nf_val = nf_val
+                if nf_val and nf_val != '0' and not re.match(r'^0+$', nf_val):
+                    nf_atual = nf_val
                     has_nf = True
+                else:
+                    nf_atual = None
+                    has_nf = False
                 
                 carga_val = p[16].strip() if len(p) > 16 else ''
                 if carga_val:
