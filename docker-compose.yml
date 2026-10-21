@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  rf-analyzer:
+    build: .
+    container_name: rf_analyzer_app
+    ports:
+      - "5001:8000"
+    dns:
+      - 192.168.0.0  # Opcional (se precisar da rede local)
+      - 192.168.0.1
+    dns_search:
+      - empresa.local
+    volumes:
+      - ./app:/app/app
+      - ./src:/app/src
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
