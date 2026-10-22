@@ -1,6 +1,6 @@
-# 📦 RF Analyzer Unified
+# 📦 RF Analyzer
 
-O **RF Analyzer Unified** é uma aplicação web de alta performance construída para simplificar e automatizar a análise, filtragem e atualização de dados de logística em lote (arquivos de registros RF e conciliação de cargas).
+O **RF Analyzer** é uma aplicação web de alta performance construída para simplificar e automatizar a análise, filtragem e atualização de dados de logística em lote (arquivos de registros RF e conciliação de cargas).
 
 ---
 
