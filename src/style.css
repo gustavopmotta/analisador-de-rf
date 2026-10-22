@@ -85,6 +85,11 @@ body {
     display: none;
 }
 
+.file-upload-box.drag-over {
+    border-color: #10b981 !important;
+    background-color: rgba(16, 185, 129, 0.1) !important;
+}
+
 .file-upload-text {
     font-size: 0.82rem;
     color: var(--text-muted);

@@ -21,74 +21,7 @@ function atualizarNomeArquivo(input, labelId) {
     }
 }
 
-// Submissão do Formulário
-document.getElementById('analise-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const loadingOverlay = document.getElementById('loading-overlay');
-    if (loadingOverlay) loadingOverlay.classList.add('active');
-
-    const codigosInput = document.getElementById('codigos').value.trim();
-    if (!codigosInput) {
-        alert('Por favor, insira ao menos um código de pedido.');
-        if (loadingOverlay) loadingOverlay.classList.remove('active');
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('codigos', codigosInput);
-
-    const filesRF = document.getElementById('arquivo_rf').files;
-    if (filesRF.length === 0) {
-        alert('Por favor, selecione ao menos um arquivo RF.');
-        if (loadingOverlay) loadingOverlay.classList.remove('active');
-        return;
-    }
-
-    for (let f of filesRF) {
-        formData.append('arquivo_rf', f);
-    }
-
-    const fileCargasInput = document.getElementById('arquivo_cargas');
-    if (fileCargasInput && fileCargasInput.files.length > 0) {
-        formData.append('arquivo_cargas', fileCargasInput.files[0]);
-    }
-
-    try {
-        const resp = await fetch('/api/analisar', {
-            method: 'POST',
-            body: formData
-        });
-
-        if (!resp.ok) {
-            throw new Error(`Erro na requisição: ${resp.status} ${resp.statusText}`);
-        }
-
-        const res = await resp.json();
-
-        if (res.erro) {
-            alert(res.erro);
-            return;
-        }
-
-        document.getElementById('boas-vindas').style.display = 'none';
-        document.getElementById('area-resultados').style.display = 'block';
-
-        document.getElementById('res-buscados').textContent = res.total_buscados || 0;
-        document.getElementById('res-arquivos').textContent = res.total_arquivos || 0;
-        document.getElementById('res-encontrados').textContent = res.resultados ? res.resultados.length : 0;
-
-        dadosAnalisados = res.resultados || [];
-        renderizarTabela(dadosAnalisados);
-    } catch (err) {
-        console.error("Erro ao analisar:", err);
-        alert('Erro ao processar dados: ' + err.message);
-    } finally {
-        if (loadingOverlay) loadingOverlay.classList.remove('active');
-    }
-});
-
-
+// Renderiza tabela de pedidos encontrados no RF
 function renderizarTabela(itens) {
     const tbody = document.getElementById('tabela-corpo');
     tbody.innerHTML = '';
@@ -104,6 +37,7 @@ function renderizarTabela(itens) {
 
         const trPrincipal = document.createElement('tr');
         trPrincipal.className = 'row-item';
+        trPrincipal.dataset.idx = idx;
         trPrincipal.dataset.hasNf = item.has_nf;
         trPrincipal.dataset.hasCarga = item.has_carga;
 
@@ -261,15 +195,33 @@ function copiarPedidosVisiveis(btn) {
 }
 
 function exportarTudo() {
-    const pres = document.querySelectorAll('pre.rf-code');
-    if (pres.length === 0) return alert('Nenhum dado para exportar.');
+    const linhasTexto = [];
 
-    const conteudo = Array.from(pres).map(p => p.innerText).join('\n');
+    // Coleta as linhas de todos os pedidos visíveis na tabela (respeitando os filtros)
+    document.querySelectorAll('.row-item').forEach(row => {
+        if (row.style.display !== 'none') {
+            const idx = row.dataset.idx;
+            const item = dadosAnalisados[idx];
+            if (item && item.linhas) {
+                // item.linhas já é um array com as linhas do pedido (01, 02, 03...)
+                linhasTexto.push(item.linhas.join('\n'));
+            }
+        }
+    });
+
+    if (linhasTexto.length === 0) {
+        return alert('Nenhum dado visível para exportar.');
+    }
+
+    // Junta todos os blocos de pedidos separados por uma linha em branco ou quebra de linha
+    const conteudo = linhasTexto.join('\n');
+
     const blob = new Blob([conteudo], { type: 'text/plain;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'RF_CARGAS_AJUSTADO.txt';
     a.click();
+    URL.revokeObjectURL(a.href);
 }
 
 async function baixarCsvModelo() {
@@ -298,3 +250,105 @@ async function baixarCsvModelo() {
         alert('Erro ao gerar arquivo CSV: ' + err.message);
     }
 }
+
+// Submissão do Formulário
+document.getElementById('analise-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const loadingOverlay = document.getElementById('loading-overlay');
+    if (loadingOverlay) loadingOverlay.classList.add('active');
+
+    const codigosInput = document.getElementById('codigos').value.trim();
+    if (!codigosInput) {
+        alert('Por favor, insira ao menos um código de pedido.');
+        if (loadingOverlay) loadingOverlay.classList.remove('active');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('codigos', codigosInput);
+
+    const filesRF = document.getElementById('arquivo_rf').files;
+    if (filesRF.length === 0) {
+        alert('Por favor, selecione ao menos um arquivo RF.');
+        if (loadingOverlay) loadingOverlay.classList.remove('active');
+        return;
+    }
+
+    for (let f of filesRF) {
+        formData.append('arquivo_rf', f);
+    }
+
+    const fileCargasInput = document.getElementById('arquivo_cargas');
+    if (fileCargasInput && fileCargasInput.files.length > 0) {
+        formData.append('arquivo_cargas', fileCargasInput.files[0]);
+    }
+
+    try {
+        const resp = await fetch('/api/analisar', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!resp.ok) {
+            throw new Error(`Erro na requisição: ${resp.status} ${resp.statusText}`);
+        }
+
+        const res = await resp.json();
+
+        if (res.erro) {
+            alert(res.erro);
+            return;
+        }
+
+        document.getElementById('boas-vindas').style.display = 'none';
+        document.getElementById('area-resultados').style.display = 'block';
+
+        document.getElementById('res-buscados').textContent = res.total_buscados || 0;
+        document.getElementById('res-arquivos').textContent = res.total_arquivos || 0;
+        document.getElementById('res-encontrados').textContent = res.resultados ? res.resultados.length : 0;
+
+        dadosAnalisados = res.resultados || [];
+        renderizarTabela(dadosAnalisados);
+    } catch (err) {
+        console.error("Erro ao analisar:", err);
+        alert('Erro ao processar dados: ' + err.message);
+    } finally {
+        if (loadingOverlay) loadingOverlay.classList.remove('active');
+    }
+});
+
+// Configuração de Drag and Drop para as caixas de upload
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.file-upload-box').forEach(box => {
+        const input = box.querySelector('input[type="file"]');
+        if (!input) return;
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            box.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                box.classList.add('drag-over');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            box.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                box.classList.remove('drag-over');
+            }, false);
+        });
+
+        box.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files && files.length > 0) {
+                input.files = files;
+                // Dispara o evento change para atualizar o label visualmente
+                const event = new Event('change', { bubbles: true });
+                input.dispatchEvent(event);
+            }
+        }, false);
+    });
+});
