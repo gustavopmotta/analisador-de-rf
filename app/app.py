@@ -197,6 +197,10 @@ async def serve_css():
 async def serve_js():
     return FileResponse(os.path.join(SRC_DIR, "app.js"))
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def serve_favicon():
+    return FileResponse(os.path.join(SRC_DIR, "favicon.ico"), media_type="image/x-icon")
+
 @app.post("/api/analisar")
 async def analisar_api(
     codigos: str = Form(...),
